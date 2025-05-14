@@ -16,10 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     const distanceSpecificTargets = [
-        { distance: 50, percentFactor: 1.10, label: '50' },
-        { distance: 100, percentFactor: 1.05, label: '100' },
-        { distance: 150, percentFactor: 1.00, label: '150' },
-        { distance: 200, percentFactor: 1.00, label: '200' }
+        { distance: 50, percentFactor: 1.10, label: '50' }, // 110% for 50
+        { distance: 100, percentFactor: 1.05, label: '100' },// 105% for 100
+        { distance: 150, percentFactor: 1.00, label: '150' },// 100% for 150
+        { distance: 200, percentFactor: 1.00, label: '200' } // 100% for 200
     ];
 
     // DOM Elements
@@ -33,21 +33,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessageDiv = document.getElementById('errorMessage');
     const loadingIndicatorDiv = document.getElementById('loadingIndicator');
 
-    // Summary Header Display Elements - Ensure these IDs match your HTML exactly
     const summaryHeaderDisplayDiv = document.getElementById('summaryHeaderDisplay');
     const displaySwimmerName = document.getElementById('displaySwimmerName');
     const displaySwimmerAge = document.getElementById('displaySwimmerAge');
     const displayTestDate = document.getElementById('displayTestDate');
-    const displayTestStroke = document.getElementById('displayTestStroke'); // Crucial check for this ID
-    const displayTestDistance = document.getElementById('displayTestDistance'); // Crucial check for this ID
-    const displayTestTime = document.getElementById('displayTestTime');       // Crucial check for this ID
-    const displayBaseVelocity = document.getElementById('displayBaseVelocity'); // Crucial check for this ID
+    const displayTestStroke = document.getElementById('displayTestStroke');
+    const displayTestDistance = document.getElementById('displayTestDistance');
+    const displayTestTime = document.getElementById('displayTestTime');
+    const displayBaseVelocity = document.getElementById('displayBaseVelocity');
 
-    // Specific Pace Guide Table Elements
     const specificPaceGuideContainerDiv = document.getElementById('specificPaceGuideContainer');
     const specificPaceGuideBody = document.getElementById('specificPaceGuideBody');
 
-    // Main Results Table Elements
     const resultsContainerDiv = document.querySelector('.results-container');
     const aerobicResultsBody = document.getElementById('aerobicResultsBody');
     const anaerobicResultsBody = document.getElementById('anaerobicResultsBody');
@@ -76,7 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function displaySummaryHeader(name, age, stroke, testTime, baseVelocity, unit) {
         if (summaryHeaderDisplayDiv) summaryHeaderDisplayDiv.style.display = 'block';
         
-        // Defensive checks for each element before setting textContent
         if (displaySwimmerName) displaySwimmerName.textContent = name || 'N/A';
         if (displaySwimmerAge) displaySwimmerAge.textContent = age || 'N/A';
         if (displayTestDate) displayTestDate.textContent = new Date().toLocaleDateString();
@@ -106,14 +102,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderDistanceSpecificPacesTable(baseTime, unit) {
-        if (!specificPaceGuideBody) return; // Guard clause
+        if (!specificPaceGuideBody) return; 
         specificPaceGuideBody.innerHTML = ''; 
         currentCalculatedDataForPdf.specificPaces = [];
-        const baseVelocity = 150 / baseTime;
+        const baseVelocity = 150 / baseTime; // This is the 100% test velocity
 
         distanceSpecificTargets.forEach((target, index) => {
-            const targetVelocity = baseVelocity * target.percentFactor;
-            const targetPaceTime = target.distance / targetVelocity;
+            // Uses target.percentFactor (1.10 for 50, 1.05 for 100, etc.)
+            const targetVelocityForSplit = baseVelocity * target.percentFactor;
+            const targetPaceTime = target.distance / targetVelocityForSplit;
             const formattedTime = formatTimeForDisplay(targetPaceTime);
             const percentString = `${(target.percentFactor * 100).toFixed(1)}%`;
 
@@ -133,12 +130,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function calculateAndRenderEnergySystems(baseTime, unit) {
-        if (!aerobicResultsBody || !anaerobicResultsBody) return; // Guard clauses
+        if (!aerobicResultsBody || !anaerobicResultsBody) return; 
         aerobicResultsBody.innerHTML = ''; 
         anaerobicResultsBody.innerHTML = '';
         currentCalculatedDataForPdf.energySystems = [];
 
-        const baseVelocity = 150 / baseTime;
+        const baseVelocity = 150 / baseTime; // This is the 100% test velocity
 
         const aerobicHeaderRow = aerobicResultsBody.insertRow();
         aerobicHeaderRow.classList.add('section-header');
@@ -154,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let rowIndex = 0;
         energySystemDefinitions.forEach(system => {
-            const adjustedVelocity = baseVelocity * system.percentFactor;
+            const systemAdjustedVelocity = baseVelocity * system.percentFactor; // Velocity for THIS energy system row
             const percentOfTestSpeed = system.percentFactor * 100;
             const formattedPercent = `${percentOfTestSpeed.toFixed(system.percentFactor === 1.00 || system.percentFactor === 0.90 ? 1 : 0)}%`;
             
@@ -162,11 +159,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 systemName: system.displayName,
                 lactate: system.estimatedLactate,
                 percentTestSpeed: formattedPercent,
-                velocity: adjustedVelocity.toFixed(2),
-                split50: formatTimeForDisplay(50 / adjustedVelocity),
-                split100: formatTimeForDisplay(100 / adjustedVelocity),
-                split150: formatTimeForDisplay(150 / adjustedVelocity),
-                split200: formatTimeForDisplay(200 / adjustedVelocity),
+                velocity: systemAdjustedVelocity.toFixed(2),
+                // Splits for 50, 100, 150, 200 are based on THIS system's adjusted velocity
+                split50: formatTimeForDisplay(50 / systemAdjustedVelocity),
+                split100: formatTimeForDisplay(100 / systemAdjustedVelocity),
+                split150: formatTimeForDisplay(150 / systemAdjustedVelocity),
+                split200: formatTimeForDisplay(200 / systemAdjustedVelocity),
                 isTestPace: system.isTestPace || false,
                 section: system.section
             };
@@ -206,9 +204,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const { jsPDF } = window.jspdf; // Make sure jsPDF is loaded
+            const { jsPDF } = window.jspdf; 
             if (!jsPDF) {
                 alert("jsPDF library not loaded. PDF generation failed.");
+                console.error("jsPDF library not loaded.");
                 return;
             }
             const doc = new jsPDF();
@@ -219,27 +218,22 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.text("Swimming Pace Report", 105, 15, null, null, "center");
 
             doc.setFontSize(11);
-            let summaryY = 25; // Start Y position for summary
+            let summaryY = 25; 
             const summaryLineHeight = 7;
             const leftMargin = 14;
 
-            doc.text(`Name: ${summary.name}`, leftMargin, summaryY);
-            summaryY += summaryLineHeight;
-            doc.text(`Age/Group: ${summary.age}`, leftMargin, summaryY);
-            summaryY += summaryLineHeight;
-            doc.text(`Date: ${summary.date}`, leftMargin, summaryY);
-            summaryY += summaryLineHeight;
-            doc.text(`Stroke: ${summary.stroke}`, leftMargin, summaryY);
-            summaryY += summaryLineHeight;
-            doc.text(`Test Distance: ${summary.testDistance}`, leftMargin, summaryY);
-            summaryY += summaryLineHeight;
-            doc.text(`Test Time: ${summary.testTime}`, leftMargin, summaryY);
-            summaryY += summaryLineHeight;
+            doc.text(`Name: ${summary.name}`, leftMargin, summaryY); summaryY += summaryLineHeight;
+            doc.text(`Age/Group: ${summary.age}`, leftMargin, summaryY); summaryY += summaryLineHeight;
+            doc.text(`Date: ${summary.date}`, leftMargin, summaryY); summaryY += summaryLineHeight;
+            doc.text(`Stroke: ${summary.stroke}`, leftMargin, summaryY); summaryY += summaryLineHeight;
+            doc.text(`Test Distance: ${summary.testDistance}`, leftMargin, summaryY); summaryY += summaryLineHeight;
+            doc.text(`Test Time: ${summary.testTime}`, leftMargin, summaryY); summaryY += summaryLineHeight;
             doc.text(`Base Velocity: ${summary.baseVelocity}`, leftMargin, summaryY);
             
             summaryY += 10; 
 
             if (currentCalculatedDataForPdf.specificPaces.length > 0) {
+                if (summaryY > 260) { doc.addPage(); summaryY = 20; } // Check for page break before table
                 doc.setFontSize(14);
                 doc.text("Distance-Specific Target Paces", 105, summaryY, null, null, "center");
                 summaryY += 7;
@@ -251,17 +245,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     headStyles: { fillColor: [108, 117, 125] },
                     styles: { fontSize: 9 },
                     margin: { top: 10, left: leftMargin, right: leftMargin },
-                    didDrawPage: function (data) { summaryY = data.cursor.y; }
+                    didDrawPage: function (data) { summaryY = data.cursor.y; } // Update Y for next element
                 });
                 summaryY = doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY + 10 : summaryY + 10;
             }
-
+            
+            if (summaryY > 240) { doc.addPage(); summaryY = 20; } // Check for page break
             doc.setFontSize(14);
-            // Check if we need a new page for the main table
-            if (summaryY > 250) { // Arbitrary threshold, adjust as needed
-                 doc.addPage();
-                 summaryY = 20; // Reset Y for new page
-            }
             doc.text("Energy System Paces", 105, summaryY, null, null, "center");
             summaryY += 7;
 
@@ -275,8 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const head = [['Energy System', 'Lactate', '% Test', `Vel (${unit}/s)`, '50', '100', '150', '200']];
 
+            if (summaryY > 260 && energySystemsBodyAerobic.length > 0) { doc.addPage(); summaryY = 20; }
             doc.setFontSize(11);
-            doc.text("Aerobic Zones", leftMargin, summaryY); // Simplified header
+            doc.text("Aerobic Zones", leftMargin, summaryY); 
             summaryY += 5;
             doc.autoTable({
                 startY: summaryY,
@@ -288,17 +279,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 columnStyles: { 0: { cellWidth: 35 }, 2: { cellWidth: 15 }, 3: { cellWidth: 15 }},
                 margin: { left: leftMargin, right: leftMargin },
                 didParseCell: function (data) {
-                    const system = currentCalculatedDataForPdf.energySystems.find(s => 
-                        s.section === 'Aerobic' && s.systemName === data.row.raw[0] && s.percentTestSpeed === data.row.raw[2]);
-                    if (system && system.isTestPace) { data.cell.styles.fillColor = '#fff3cd'; data.cell.styles.fontStyle = 'bold'; }
+                    const systemRow = currentCalculatedDataForPdf.energySystems.filter(s => s.section === 'Aerobic')[data.row.index];
+                    if (systemRow && systemRow.isTestPace) { data.cell.styles.fillColor = '#fff3cd'; data.cell.styles.fontStyle = 'bold'; }
                 },
                 didDrawPage: function (data) { summaryY = data.cursor.y; }
             });
             summaryY = doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY + 10 : summaryY + 10;
 
-            if (summaryY > 250) { doc.addPage(); summaryY = 20; }
+            if (summaryY > 260 && energySystemsBodyAnaerobic.length > 0) { doc.addPage(); summaryY = 20; }
             doc.setFontSize(11);
-            doc.text("Anaerobic Zones", leftMargin, summaryY); // Simplified header
+            doc.text("Anaerobic Zones", leftMargin, summaryY);
             summaryY += 5;
             doc.autoTable({
                 startY: summaryY,
@@ -310,9 +300,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 columnStyles: { 0: { cellWidth: 35 }, 2: { cellWidth: 15 }, 3: { cellWidth: 15 }},
                 margin: { left: leftMargin, right: leftMargin },
                 didParseCell: function (data) {
-                    const system = currentCalculatedDataForPdf.energySystems.find(s => 
-                        s.section === 'Anaerobic' && s.systemName === data.row.raw[0] && s.percentTestSpeed === data.row.raw[2]);
-                    if (system && system.isTestPace) { data.cell.styles.fillColor = '#fff3cd'; data.cell.styles.fontStyle = 'bold';}
+                    const systemRow = currentCalculatedDataForPdf.energySystems.filter(s => s.section === 'Anaerobic')[data.row.index];
+                    if (systemRow && systemRow.isTestPace) { data.cell.styles.fillColor = '#fff3cd'; data.cell.styles.fontStyle = 'bold';}
                 }
             });
 
@@ -359,8 +348,8 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const baseVelocity = 150 / time;
                 displaySummaryHeader(swimmerName, swimmerAge, stroke, time, baseVelocity, unit);
-                renderDistanceSpecificPacesTable(time, unit);
-                calculateAndRenderEnergySystems(time, unit);
+                renderDistanceSpecificPacesTable(time, unit); // Calculates 50@110%, 100@105% etc. for its own table
+                calculateAndRenderEnergySystems(time, unit); // Calculates 50,100,150,200 based on each system's own velocity
             } catch (e) {
                 console.error("Error during calculation/rendering:", e);
                 if (errorMessageDiv) {
